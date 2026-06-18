@@ -1,0 +1,22 @@
+{
+  "name": "Fresh Cart Find - Mobile Vegetable & Fruit Tracker",
+  "short_name": "Fresh Cart",
+  "description": "Locate mobile vegetable and fruit cart vendors in real-time.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#16a34a",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "https://img.icons8.com/color/144/organic-food.png",
+      "sizes": "144x144",
+      "type": "image/png"
+    },
+    {
+      "src": "https://img.icons8.com/color/512/organic-food.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
