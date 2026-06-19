@@ -2,6 +2,7 @@ import {StrictMode} from 'react';
 import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
+import { I18nProvider } from './i18n/I18nContext';
 
 // Register PWA service worker
 if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
@@ -14,6 +15,8 @@ if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
+    <I18nProvider>
+      <App />
+    </I18nProvider>
   </StrictMode>,
 );

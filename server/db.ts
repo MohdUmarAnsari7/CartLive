@@ -1,5 +1,7 @@
 import mongoose from 'mongoose';
-import { Product, Seller, Review, PushNotification } from '../src/types';
+import fs from 'fs';
+import path from 'path';
+import { Product, Seller, Review, PushNotification, Feedback } from '../src/types';
 
 // Let's define the Master Mongoose Schemas & Models
 const SellerSchema = new mongoose.Schema({
@@ -64,15 +66,24 @@ const SystemSettingsSchema = new mongoose.Schema({
   announcements: [String]
 }, { timestamps: true });
 
+const FeedbackSchema = new mongoose.Schema({
+  id: { type: String, required: true, unique: true },
+  name: String,
+  description: String,
+  createdAt: String
+}, { timestamps: true });
+
 const MongooseSeller = mongoose.models.Seller || mongoose.model('Seller', SellerSchema);
 const MongooseCatalog = mongoose.models.CatalogProduct || mongoose.model('CatalogProduct', CatalogProductSchema);
 const MongooseNotification = mongoose.models.PushNotification || mongoose.model('PushNotification', PushNotificationSchema);
 const MongooseSettings = mongoose.models.SystemSettings || mongoose.model('SystemSettings', SystemSettingsSchema);
+const MongooseFeedback = mongoose.models.Feedback || mongoose.model('Feedback', FeedbackSchema);
 
 interface DatabaseSchema {
   sellers: Seller[];
   catalog: Product[];
   notifications: PushNotification[];
+  feedbacks: Feedback[];
   systemSettings: {
     searchRadiusKm: number;
     allowSelfRegistration: boolean;
@@ -83,23 +94,57 @@ interface DatabaseSchema {
 export class FileDatabase {
   private data: DatabaseSchema;
   private isConnectedToMongo: boolean = false;
+  /** Resolves once MongoDB has connected and all data has been loaded (or failed). */
+  public ready: Promise<void>;
 
   constructor() {
-    // Initial data is clean and empty (no preloaded static mock listings)
+    // Initial data is clean and empty
     this.data = {
       sellers: [],
       catalog: [],
       notifications: [],
+      feedbacks: [],
       systemSettings: {
         searchRadiusKm: 5,
         allowSelfRegistration: true,
         announcements: ['Welcome FreshTrack! Real-time local street cart maps sync.']
       }
     };
-    this.init();
+    // Store the init promise so callers can await DB readiness before serving requests
+    this.ready = this.init();
+  }
+
+  private saveLocalBackup() {
+    try {
+      const backupPath = path.join(process.cwd(), 'workspace-data-store.json');
+      fs.writeFileSync(backupPath, JSON.stringify(this.data, null, 2), 'utf8');
+    } catch (err) {
+      console.error('🔴 Failed to write local JSON backup file:', err);
+    }
   }
 
   private async init() {
+    // Try loading local file backup first so we maintain state even on in-memory mode restart
+    const backupPath = path.join(process.cwd(), 'workspace-data-store.json');
+    if (fs.existsSync(backupPath)) {
+      try {
+        const fileContent = fs.readFileSync(backupPath, 'utf8');
+        const parsed = JSON.parse(fileContent);
+        if (parsed) {
+          this.data = {
+            sellers: parsed.sellers || [],
+            catalog: parsed.catalog || [],
+            notifications: parsed.notifications || [],
+            feedbacks: parsed.feedbacks || [],
+            systemSettings: parsed.systemSettings || this.data.systemSettings
+          };
+          console.log(`💾 Restored state from local File Backup: ${this.data.sellers.length} sellers, ${this.data.feedbacks.length} feedbacks.`);
+        }
+      } catch (err) {
+        console.error('🔴 Failed to read/parse local backup file:', err);
+      }
+    }
+
     const mongoUri = process.env.MONGODB_URI;
     if (mongoUri) {
       console.log('⚡ Detected MONGODB_URI in environment. Connecting to MongoDB Atlas...');
@@ -112,7 +157,7 @@ export class FileDatabase {
         console.error('🔴 Connection to MongoDB Atlas failed:', error);
       }
     } else {
-      console.log('⚠️ No MONGODB_URI configured. Running with in-memory slate.');
+      console.log('⚠️ No MONGODB_URI configured. Running with in-memory slate + local JSON file storage.');
     }
   }
 
@@ -122,6 +167,7 @@ export class FileDatabase {
       const catalog = await MongooseCatalog.find().lean();
       const notifications = await MongooseNotification.find().lean();
       const settings = await MongooseSettings.findOne().lean();
+      const feedbacks = await MongooseFeedback.find().sort({ createdAt: -1 }).lean();
 
       if (sellers && sellers.length > 0) {
         this.data.sellers = sellers as any[];
@@ -131,6 +177,9 @@ export class FileDatabase {
       }
       if (notifications && notifications.length > 0) {
         this.data.notifications = notifications as any[];
+      }
+      if (feedbacks && feedbacks.length > 0) {
+        this.data.feedbacks = feedbacks as any[];
       }
       if (settings) {
         this.data.systemSettings = {
@@ -147,6 +196,7 @@ export class FileDatabase {
 
   // Concurrently save change interactions back to MongoDB
   private async persistSeller(seller: Seller) {
+    this.saveLocalBackup();
     if (!this.isConnectedToMongo) return;
     try {
       await MongooseSeller.updateOne(
@@ -160,6 +210,7 @@ export class FileDatabase {
   }
 
   private async persistCatalogProduct(product: Product) {
+    this.saveLocalBackup();
     if (!this.isConnectedToMongo) return;
     try {
       await MongooseCatalog.updateOne(
@@ -173,6 +224,7 @@ export class FileDatabase {
   }
 
   private async persistNotification(notification: PushNotification) {
+    this.saveLocalBackup();
     if (!this.isConnectedToMongo) return;
     try {
       await MongooseNotification.updateOne(
@@ -186,6 +238,7 @@ export class FileDatabase {
   }
 
   private async persistSettings(settings: DatabaseSchema['systemSettings']) {
+    this.saveLocalBackup();
     if (!this.isConnectedToMongo) return;
     try {
       await MongooseSettings.updateOne(
@@ -199,6 +252,7 @@ export class FileDatabase {
   }
 
   private async deleteSellerFromMongo(id: string) {
+    this.saveLocalBackup();
     if (!this.isConnectedToMongo) return;
     try {
       await MongooseSeller.deleteOne({ id });
@@ -208,11 +262,36 @@ export class FileDatabase {
   }
 
   private async deleteCatalogProductFromMongo(id: string) {
+    this.saveLocalBackup();
     if (!this.isConnectedToMongo) return;
     try {
       await MongooseCatalog.deleteOne({ id });
     } catch (err) {
       console.error('Failed to delete Catalog Product from MongoDB Atlas:', err);
+    }
+  }
+
+  private async persistFeedback(feedback: Feedback) {
+    this.saveLocalBackup();
+    if (!this.isConnectedToMongo) return;
+    try {
+      await MongooseFeedback.updateOne(
+        { id: feedback.id },
+        { $set: feedback },
+        { upsert: true }
+      );
+    } catch (err) {
+      console.error('Failed to save Feedback to MongoDB Atlas:', err);
+    }
+  }
+
+  private async deleteFeedbackFromMongo(id: string) {
+    this.saveLocalBackup();
+    if (!this.isConnectedToMongo) return;
+    try {
+      await MongooseFeedback.deleteOne({ id });
+    } catch (err) {
+      console.error('Failed to delete Feedback from MongoDB Atlas:', err);
     }
   }
 
@@ -342,6 +421,34 @@ export class FileDatabase {
     };
     this.persistSettings(this.data.systemSettings);
     return this.data.systemSettings;
+  }
+
+  getFeedbacks(): Feedback[] {
+    return this.data.feedbacks || [];
+  }
+
+  addFeedback(feedback: Omit<Feedback, 'id' | 'createdAt'>): Feedback {
+    const newFeedback: Feedback = {
+      id: `f_${Date.now()}`,
+      name: feedback.name,
+      description: feedback.description,
+      createdAt: new Date().toISOString()
+    };
+    this.data.feedbacks = this.data.feedbacks || [];
+    this.data.feedbacks.unshift(newFeedback);
+    this.persistFeedback(newFeedback);
+    return newFeedback;
+  }
+
+  deleteFeedback(id: string): boolean {
+    this.data.feedbacks = this.data.feedbacks || [];
+    const initialLen = this.data.feedbacks.length;
+    this.data.feedbacks = this.data.feedbacks.filter(f => f.id !== id);
+    if (this.data.feedbacks.length !== initialLen) {
+      this.deleteFeedbackFromMongo(id);
+      return true;
+    }
+    return false;
   }
 }
 

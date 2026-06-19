@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { MessageSquare, Send, CheckCircle2, User, FileText } from 'lucide-react';
+import { useI18n } from '../i18n/I18nContext';
 
 export default function FeedbackPage() {
+  const { t } = useI18n();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -51,9 +53,9 @@ export default function FeedbackPage() {
           <div className="inline-flex p-3.5 bg-white/10 rounded-2xl mb-4 shadow-inner" id="feedback-icon-container">
             <MessageSquare className="w-8 h-8 text-white stroke-[2]" />
           </div>
-          <h2 className="text-2xl font-bold tracking-tight text-white font-sans">Share Your Feedback</h2>
+          <h2 className="text-2xl font-bold tracking-tight text-white font-sans">{t('FEED_HEADER')}</h2>
           <p className="text-emerald-100 text-xs mt-1.5 max-w-md mx-auto leading-relaxed">
-            Your name and description will be instantly submitted and displayed in the server administrator's terminal console logs.
+            {t('FEED_DESC')}
           </p>
         </div>
 
@@ -65,18 +67,18 @@ export default function FeedbackPage() {
                 <CheckCircle2 className="w-12 h-12 stroke-[1.5]" />
               </div>
               <div className="space-y-2">
-                <h3 className="text-lg font-bold text-slate-800">Feedback Submitted Successfully!</h3>
+                <h3 className="text-lg font-bold text-slate-800">{t('FEED_SUCCESS_TITLE')}</h3>
                 <p className="text-xs text-slate-500 max-w-sm mx-auto leading-relaxed">
-                  Thank you! The administrator can now view your input inside the terminal log.
+                  {t('FEED_SUCCESS_DESC')}
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => setSuccess(false)}
-                className="mt-4 px-6 py-2 bg-slate-850 hover:bg-slate-900 text-white font-bold text-xs rounded-xl transition-all shadow-md active:scale-95"
+                className="mt-4 px-6 py-2 bg-slate-850 hover:bg-slate-900 text-white font-bold text-xs rounded-xl transition-all shadow-md active:scale-95 cursor-pointer"
                 id="feedback-reset-btn"
               >
-                Submit another response
+                {t('FEED_RETRY_BTN')}
               </button>
             </div>
           ) : (
@@ -90,7 +92,7 @@ export default function FeedbackPage() {
               {/* Name field */}
               <div className="space-y-1.5">
                 <label htmlFor="customer-name-input" className="text-xs font-bold text-slate-600 tracking-wide uppercase block">
-                  Your Name (आपका नाम)
+                  {t('FEED_LABEL_NAME')}
                 </label>
                 <div className="relative">
                   <User className="absolute left-3.5 top-3 w-4 h-4 text-slate-400" />
@@ -98,7 +100,7 @@ export default function FeedbackPage() {
                     type="text"
                     required
                     id="customer-name-input"
-                    placeholder="Enter your full name"
+                    placeholder={t('FEED_PLACEHOLDER_NAME')}
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:border-emerald-500 focus:outline-none focus:ring-4 focus:ring-emerald-500/10 transition-all font-medium text-slate-800"
@@ -109,14 +111,14 @@ export default function FeedbackPage() {
               {/* Feedback description field */}
               <div className="space-y-1.5">
                 <label htmlFor="feedback-desc-input" className="text-xs font-bold text-slate-600 tracking-wide uppercase block">
-                  Feedback Description (समीक्षा का विवरण)
+                  {t('FEED_LABEL_DESC')}
                 </label>
                 <div className="relative">
                   <FileText className="absolute left-3.5 top-3 w-4 h-4 text-slate-400" />
                   <textarea
                     required
                     id="feedback-desc-input"
-                    placeholder="Describe your feedback, feature requests, or bugs..."
+                    placeholder={t('FEED_PLACEHOLDER_DESC')}
                     rows={4}
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
@@ -129,15 +131,15 @@ export default function FeedbackPage() {
               <button
                 type="submit"
                 disabled={submitting}
-                className="w-full py-3 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-750 hover:to-emerald-800 disabled:opacity-50 text-white font-bold rounded-xl text-xs sm:text-sm tracking-wide inline-flex items-center justify-center gap-2 transition-all active:scale-95 shadow-md shadow-emerald-600/10"
+                className="w-full py-3 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-750 hover:to-emerald-800 disabled:opacity-50 text-white font-bold rounded-xl text-xs sm:text-sm tracking-wide inline-flex items-center justify-center gap-2 transition-all active:scale-95 shadow-md shadow-emerald-600/10 cursor-pointer"
                 id="feedback-submit-btn"
               >
                 {submitting ? (
-                  <>Logging to server terminal...</>
+                  <>{t('FEED_BTN_LOGGING')}</>
                 ) : (
                   <>
                     <Send className="w-3.5 h-3.5" />
-                    Submit to terminal (टर्मिनल पर भेजें)
+                    {t('FEED_BTN_SUBMIT')}
                   </>
                 )}
               </button>

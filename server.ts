@@ -1,11 +1,10 @@
+import 'dotenv/config'; // MUST be first — loads .env before anything reads process.env
 import express from 'express';
 import path from 'path';
+import cors from 'cors';
 import { GoogleGenAI } from '@google/genai';
 import { dbInstance } from './server/db';
 import { Seller, SellerProduct, Review } from './src/types';
-import cors from 'cors';
-
-
 
 // Let's implement lazy initialization of Gemini to prevent crashes on startup if secret is missing
 let aiClient: GoogleGenAI | null = null;
@@ -66,14 +65,14 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
-  // CORS — must be registered before all routes
+  // CORS — must be before all routes
   app.use(cors({
     origin: ['http://localhost:5173', 'http://localhost:3000'],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true
   }));
-  app.options('*', cors()); // Handle pre-flight for all routes
+  app.options('*', cors());
 
   app.use(express.json({ limit: '50mb' }));
   app.use(express.urlencoded({ limit: '50mb', extended: true }));
@@ -421,7 +420,7 @@ async function startServer() {
     res.json(dbInstance.getNotifications());
   });
 
-  // Client Feedback endpoint - Prints to admin server terminal console
+  // Client Feedback endpoint - Prints to admin server terminal console & saves to DB
   app.post('/api/feedback', (req, res) => {
     const { name, description } = req.body;
     if (!name || !description) {
@@ -435,7 +434,30 @@ async function startServer() {
     console.log(`⏰ Time / समय: ${new Date().toLocaleString()}`);
     console.log('======================================================================\n');
 
-    res.status(200).json({ success: true, message: 'Feedback printed to admin terminal.' });
+    const feedback = dbInstance.addFeedback({
+      name: name.trim(),
+      description: description.trim()
+    });
+
+    // Notify connected administrative clients via SSE
+    broadcastRealtime('feedback_submitted', feedback);
+
+    res.status(200).json({ success: true, message: 'Feedback logged to terminal and database.', feedback });
+  });
+
+  // Fetch all customer feedbacks (Admin Only role)
+  app.get('/api/admin/feedbacks', (req, res) => {
+    res.json(dbInstance.getFeedbacks());
+  });
+
+  // Delete specific customer feedback
+  app.delete('/api/admin/feedbacks/:id', (req, res) => {
+    const deleted = dbInstance.deleteFeedback(req.params.id);
+    if (deleted) {
+      res.json({ success: true });
+    } else {
+      res.status(404).json({ error: 'Feedback not found' });
+    }
   });
 
   app.post('/api/admin/announcement', (req, res) => {
@@ -539,8 +561,22 @@ ${formattedReviews}`;
     }
   });
 
+  // In production, serve the built frontend. In dev, Vite runs separately on port 5173.
+  if (process.env.NODE_ENV === 'production') {
+    const distPath = path.join(process.cwd(), 'dist');
+    app.use(express.static(distPath));
+    app.get('*', (_req, res) => {
+      res.sendFile(path.join(distPath, 'index.html'));
+    });
+  }
+
+  // Wait for MongoDB to connect and load all data BEFORE accepting any requests
+  console.log('⏳ Waiting for database to be ready...');
+  await dbInstance.ready;
+  console.log('✅ Database ready. Starting HTTP server...');
+
   app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Mobile Fruits & Vegetables Finder server booting on Port ${PORT}`);
+    console.log(`🚀 CartLive server running on Port ${PORT}`);
   });
 }
 

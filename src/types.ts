@@ -75,3 +75,11 @@ export interface AdminAnalytics {
   popularVegetables: { name: string; count: number }[];
   popularFruits: { name: string; count: number }[];
 }
+
+export interface Feedback {
+  id: string;
+  name: string;
+  description: string;
+  createdAt: string;
+}
+

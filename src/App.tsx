@@ -10,7 +10,8 @@ import {
   Landmark, 
   BellRing,
   Globe,
-  MessageSquare
+  MessageSquare,
+  Languages
 } from 'lucide-react';
 import PWAInstaller from './components/PWAInstaller';
 import CustomerDashboard from './components/CustomerDashboard';
@@ -18,6 +19,7 @@ import SellerDashboard from './components/SellerDashboard';
 import AdminDashboard from './components/AdminDashboard';
 import AuthScreen from './components/AuthScreen';
 import FeedbackPage from './components/FeedbackPage';
+import { useI18n } from './i18n/I18nContext';
 
 // Obtain Maps API Key as specified in Google Maps skill guidelines to trigger AI Studio Credentials Popup
 const API_KEY = '';
@@ -25,11 +27,27 @@ const API_KEY = '';
 type ActiveTab = 'CUSTOMER' | 'SELLER' | 'ADMIN' | 'FEEDBACK';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<ActiveTab>('CUSTOMER');
-  
   // Auth state variables
-  const [role, setRole] = useState<'SELLER' | 'ADMIN' | null>(null);
-  const [loggedInUser, setLoggedInUser] = useState<any>(null);
+  const [role, setRole] = useState<'SELLER' | 'ADMIN' | null>(() => {
+    const saved = localStorage.getItem('freshtrack_role');
+    return (saved === 'SELLER' || saved === 'ADMIN') ? saved : null;
+  });
+  const [loggedInUser, setLoggedInUser] = useState<any>(() => {
+    const saved = localStorage.getItem('freshtrack_user');
+    try {
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  const [activeTab, setActiveTab] = useState<ActiveTab>(() => {
+    const savedRole = localStorage.getItem('freshtrack_role');
+    if (savedRole === 'SELLER') return 'SELLER';
+    if (savedRole === 'ADMIN') return 'ADMIN';
+    return 'CUSTOMER';
+  });
+  const { locale, setLocale, t } = useI18n();
 
   // System parameters
   const [searchRadiusKm, setSearchRadiusKm] = useState(5);
@@ -37,6 +55,8 @@ export default function App() {
   const handleLoginSuccess = (userRole: 'SELLER' | 'ADMIN', user: any) => {
     setRole(userRole);
     setLoggedInUser(user);
+    localStorage.setItem('freshtrack_role', userRole);
+    localStorage.setItem('freshtrack_user', JSON.stringify(user));
     if (userRole === 'SELLER') {
       setActiveTab('SELLER');
     } else if (userRole === 'ADMIN') {
@@ -47,11 +67,14 @@ export default function App() {
   const handleLogout = () => {
     setRole(null);
     setLoggedInUser(null);
+    localStorage.removeItem('freshtrack_role');
+    localStorage.removeItem('freshtrack_user');
     setActiveTab('CUSTOMER');
   };
 
   const handleProfileUpdate = (updatedSeller: any) => {
     setLoggedInUser(updatedSeller);
+    localStorage.setItem('freshtrack_user', JSON.stringify(updatedSeller));
   };
 
   return (
@@ -73,13 +96,29 @@ export default function App() {
             </div>
             <div>
               <h1 className="text-sm font-bold tracking-tight text-slate-900 flex items-center gap-1">
-                <span>FreshTrack</span>
+                <span>{t('APP_NAME')}</span>
                 <span className="text-[9px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full font-bold">PWA</span>
               </h1>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] bg-slate-100 text-slate-600 px-2.5 py-1 rounded-md font-medium">GPS Street Cart Finder</span>
+          
+          <div className="flex items-center gap-2 sm:gap-4">
+            <span className="hidden sm:inline-block text-[10px] bg-slate-100 text-slate-600 px-2.5 py-1 rounded-md font-medium font-mono">
+              {t('GPS_SUBTITLE')}
+            </span>
+
+            {/* Language Switcher Toggle */}
+            <button
+              onClick={() => setLocale(locale === 'en' ? 'hi' : 'en')}
+              className="flex items-center gap-1.5 px-3 py-1.5 border border-slate-200 rounded-xl text-xs font-bold bg-slate-50 hover:bg-slate-100 text-slate-755 transition shadow-sm active:scale-95 cursor-pointer select-none"
+              title="Switch language / भाषा बदलें"
+            >
+              <Languages className="w-3.5 h-3.5 text-emerald-600" />
+              <span>{locale === 'en' ? 'English' : 'हिंदी'}</span>
+              <span className="text-[9px] text-slate-400 font-normal">
+                ({locale === 'en' ? 'EN' : 'HI'})
+              </span>
+            </button>
           </div>
         </div>
       </header>
@@ -118,9 +157,9 @@ export default function App() {
             <div className="py-6 space-y-4">
               <div className="max-w-md mx-auto text-center p-6 bg-amber-50 border border-amber-200 rounded-2xl text-amber-900 m-4 space-y-3 shadow-inner">
                 <BellRing className="w-8 h-8 mx-auto text-amber-600 animate-pulse" />
-                <h4 className="font-bold text-sm tracking-tight">Admin Authentication Required</h4>
+                <h4 className="font-bold text-sm tracking-tight">{t('ADMIN_AUTH_REQ')}</h4>
                 <p className="text-xs text-amber-700 leading-normal">
-                  You are attempting to access protected global parameters settings. Authenticate using demo credential details below to continue.
+                  {t('ADMIN_WARN')}
                 </p>
               </div>
               <AuthScreen onLoginSuccess={handleLoginSuccess} isAdminOnly={true} />
@@ -147,7 +186,7 @@ export default function App() {
             <div className={`p-1.5 rounded-xl transition-all duration-300 ${activeTab === 'CUSTOMER' ? 'bg-emerald-100/60 ring-2 ring-emerald-500/10' : 'bg-transparent'}`}>
               <Globe className={`w-5 h-5 transition-colors ${activeTab === 'CUSTOMER' ? 'text-emerald-600 stroke-[2.25]' : 'text-slate-400'}`} />
             </div>
-            <span className="text-[10px] sm:text-xs tracking-tight">Discover Carts</span>
+            <span className="text-[10px] sm:text-xs tracking-tight">{t('DISCOVER_CARTS_TAB')}</span>
           </button>
 
           <button
@@ -161,7 +200,7 @@ export default function App() {
             <div className={`p-1.5 rounded-xl transition-all duration-300 ${activeTab === 'SELLER' ? 'bg-emerald-100/60 ring-2 ring-emerald-500/10' : 'bg-transparent'}`}>
               <Activity className={`w-5 h-5 transition-colors ${activeTab === 'SELLER' ? 'text-emerald-600 stroke-[2.25]' : 'text-slate-400'}`} />
             </div>
-            <span className="text-[10px] sm:text-xs tracking-tight">Seller Center</span>
+            <span className="text-[10px] sm:text-xs tracking-tight">{t('SELLER_CENTER_TAB')}</span>
           </button>
 
           <button
@@ -176,7 +215,7 @@ export default function App() {
             <div className={`p-1.5 rounded-xl transition-all duration-300 ${activeTab === 'ADMIN' ? 'bg-emerald-100/60 ring-2 ring-emerald-500/10' : 'bg-transparent'}`}>
               <LayoutDashboard className={`w-5 h-5 transition-colors ${activeTab === 'ADMIN' ? 'text-emerald-600 stroke-[2.25]' : 'text-slate-400'}`} />
             </div>
-            <span className="text-[10px] sm:text-xs tracking-tight font-sans">Admin Terminal</span>
+            <span className="text-[10px] sm:text-xs tracking-tight font-sans">{t('ADMIN_TERMINAL_TAB')}</span>
           </button>
 
           <button
@@ -191,7 +230,7 @@ export default function App() {
             <div className={`p-1.5 rounded-xl transition-all duration-300 ${activeTab === 'FEEDBACK' ? 'bg-emerald-100/60 ring-2 ring-emerald-500/10' : 'bg-transparent'}`}>
               <MessageSquare className={`w-5 h-5 transition-colors ${activeTab === 'FEEDBACK' ? 'text-emerald-600 stroke-[2.25]' : 'text-slate-400'}`} />
             </div>
-            <span className="text-[10px] sm:text-xs tracking-tight">Feedback</span>
+            <span className="text-[10px] sm:text-xs tracking-tight text-center">{t('FEEDBACK_TAB')}</span>
           </button>
         </div>
       </nav>
@@ -200,19 +239,19 @@ export default function App() {
       <footer className="bg-slate-900 text-slate-500 py-6 border-t border-slate-800 text-xs">
         <div className="max-w-7xl mx-auto px-4 flex flex-col md:flex-row items-center justify-between gap-4 text-center">
           <div>
-            <p className="font-extrabold text-slate-300">Fresh Cart Find PWA Platform</p>
+            <p className="font-extrabold text-slate-300">{t('FOOTER_TITLE')}</p>
             <p className="text-[10px] text-slate-500 mt-1 leading-normal">
-              Empowering local fruit and vegetables street cart sellers (pourmen) with live geodistribution discovery networks.
+              {t('FOOTER_DESC')}
             </p>
           </div>
           <div className="flex items-center gap-4 text-slate-400 font-semibold text-[11px]">
-            <span>✓ GPS Location Tracking Enabled</span>
+            <span>✓ {t('FOOTER_TRACKING')}</span>
             <span>•</span>
-            <span>✓ Simulated Push notifications</span>
+            <span>✓ {t('FOOTER_NOTIF')}</span>
             <span>•</span>
-            <span>✓ JWT Authenticated Sessions</span>
+            <span>✓ {t('FOOTER_SESSION')}</span>
           </div>
-          <p className="text-[10px] text-slate-600">© 2026 Mobile Veg & Fruit Cart Finder Inc. All rights reserved.</p>
+          <p className="text-[10px] text-slate-655">{t('FOOTER_RIGHTS')}</p>
         </div>
       </footer>
     </div>
