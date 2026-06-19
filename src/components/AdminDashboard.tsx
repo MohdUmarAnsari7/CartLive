@@ -16,7 +16,9 @@ import {
   Check, 
   X, 
   UserX,
-  ListOrdered
+  ListOrdered,
+  Upload,
+  Image
 } from 'lucide-react';
 import { Seller, Product, PushNotification, Feedback } from '../types';
 import { useI18n } from '../i18n/I18nContext';
@@ -26,9 +28,10 @@ interface AdminDashboardProps {
   onLogout: () => void;
   systemRadius: number;
   onUpdateRadius: (radius: number) => void;
+  onUpdateLogo?: (logo: string) => void;
 }
 
-export default function AdminDashboard({ apiKey, onLogout, systemRadius, onUpdateRadius }: AdminDashboardProps) {
+export default function AdminDashboard({ apiKey, onLogout, systemRadius, onUpdateRadius, onUpdateLogo }: AdminDashboardProps) {
   const { t } = useI18n();
   const [sellers, setSellers] = useState<Seller[]>([]);
   const [catalog, setCatalog] = useState<Product[]>([]);
@@ -51,6 +54,9 @@ export default function AdminDashboard({ apiKey, onLogout, systemRadius, onUpdat
   // Config settings
   const [radiusKm, setRadiusKm] = useState(systemRadius);
   const [settingsSuccess, setSettingsSuccess] = useState(false);
+  const [logoPreview, setLogoPreview] = useState<string>('');
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const [activeWindowId, setActiveWindowId] = useState<string | null>(null);
 
@@ -67,6 +73,13 @@ export default function AdminDashboard({ apiKey, onLogout, systemRadius, onUpdat
 
       const fRes = await fetch('/api/admin/feedbacks');
       if (fRes.ok) setFeedbacks(await fRes.json());
+
+      const setRes = await fetch('/api/settings');
+      if (setRes.ok) {
+        const settings = await setRes.json();
+        if (settings.searchRadiusKm) setRadiusKm(settings.searchRadiusKm);
+        if (settings.appLogo) setLogoPreview(settings.appLogo);
+      }
     } catch (e) {
       console.error(e);
     }
@@ -187,16 +200,71 @@ export default function AdminDashboard({ apiKey, onLogout, systemRadius, onUpdat
     }
   };
 
+  const processFile = (file: File) => {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      alert('Selected file must be an image.');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const base64 = e.target?.result as string;
+      if (base64) {
+        setLogoPreview(base64);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      processFile(file);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = () => {
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      processFile(file);
+    }
+  };
+
+  const triggerFileSelect = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleRemoveLogo = () => {
+    setLogoPreview('');
+  };
+
   const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       const res = await fetch('/api/admin/settings', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ searchRadiusKm: radiusKm })
+        body: JSON.stringify({ 
+          searchRadiusKm: radiusKm,
+          appLogo: logoPreview
+        })
       });
       if (res.ok) {
         onUpdateRadius(Number(radiusKm));
+        if (onUpdateLogo) {
+          onUpdateLogo(logoPreview);
+        }
         setSettingsSuccess(true);
         setTimeout(() => setSettingsSuccess(false), 4000);
       }
@@ -597,9 +665,60 @@ export default function AdminDashboard({ apiKey, onLogout, systemRadius, onUpdat
                 />
               </div>
 
+              <div className="space-y-1 pt-3 border-t border-slate-100 mt-2">
+                <label className="font-semibold text-slate-650 block">Application Logo Image</label>
+                
+                {logoPreview ? (
+                  <div className="flex items-center gap-3 p-2 bg-slate-50 border border-slate-200 rounded-xl">
+                    <img 
+                      src={logoPreview} 
+                      alt="Custom logo" 
+                      className="w-12 h-12 object-cover rounded-lg border border-slate-200 shadow-sm"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-slate-800 text-[10px] truncate">Custom logo loaded</p>
+                      <p className="text-[9px] text-slate-500">Will replace header icon</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleRemoveLogo}
+                      className="p-1 px-2.5 text-[10px] font-bold text-red-650 hover:bg-red-50 rounded-lg border border-red-200 cursor-pointer transition active:scale-95"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                ) : (
+                  <div 
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                    onClick={triggerFileSelect}
+                    className={`border border-dashed rounded-xl p-4 text-center cursor-pointer transition select-none flex flex-col items-center justify-center gap-1.5 ${
+                      isDragging 
+                        ? 'border-emerald-500 bg-emerald-50/40' 
+                        : 'border-slate-200 hover:border-emerald-500/80 hover:bg-slate-50'
+                    }`}
+                  >
+                    <Upload className="w-5 h-5 text-slate-400 mx-auto" />
+                    <div>
+                      <p className="font-bold text-slate-700 text-[11px]">Click or drag system image</p>
+                      <p className="text-[9px] text-slate-400">PNG, JPG, SVG or WebP</p>
+                    </div>
+                  </div>
+                )}
+                <input 
+                  type="file" 
+                  ref={fileInputRef}
+                  onChange={handleFileChange}
+                  accept="image/*" 
+                  className="hidden" 
+                  onClick={(e) => e.stopPropagation()}
+                />
+              </div>
+
               <button
                 type="submit"
-                className="w-full py-1.5 bg-slate-150 hover:bg-slate-200 bg-slate-100 text-slate-700 font-bold rounded-lg transition-all cursor-pointer"
+                className="w-full py-1.5 bg-slate-150 hover:bg-slate-200 bg-slate-100 text-slate-700 font-bold rounded-lg transition-all cursor-pointer mt-2"
               >
                 Save Properties
               </button>

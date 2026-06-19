@@ -1,7 +1,6 @@
-import 'dotenv/config'; // MUST be first — loads .env before anything reads process.env
+import 'dotenv/config';
 import express from 'express';
 import path from 'path';
-import cors from 'cors';
 import { GoogleGenAI } from '@google/genai';
 import { dbInstance } from './server/db';
 import { Seller, SellerProduct, Review } from './src/types';
@@ -33,7 +32,7 @@ async function generateContentWithFallback(
     config?: any;
   }
 ) {
-  const modelsToTry = [params.model, 'gemini-1.5-flash-latest', 'gemini-1.5-pro-latest'];
+  const modelsToTry = [params.model, 'gemini-flash-latest', 'gemini-3.1-pro-preview'];
   let lastError: any = null;
 
   for (const model of modelsToTry) {
@@ -64,15 +63,6 @@ async function generateContentWithFallback(
 async function startServer() {
   const app = express();
   const PORT = 3000;
-
-  // CORS — must be before all routes
-  app.use(cors({
-    origin: ['http://localhost:5173', 'http://localhost:3000'],
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-    credentials: true
-  }));
-  app.options('*', cors());
 
   app.use(express.json({ limit: '50mb' }));
   app.use(express.urlencoded({ limit: '50mb', extended: true }));
@@ -478,15 +468,20 @@ async function startServer() {
 
   // Settings
   app.get('/api/settings', (req, res) => {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
     res.json(dbInstance.getSettings());
   });
 
   app.put('/api/admin/settings', (req, res) => {
-    const { searchRadiusKm, allowSelfRegistration } = req.body;
+    const { searchRadiusKm, allowSelfRegistration, appLogo } = req.body;
     const settings = dbInstance.updateSettings({
       searchRadiusKm: Number(searchRadiusKm) || 5,
-      allowSelfRegistration: allowSelfRegistration !== false
+      allowSelfRegistration: allowSelfRegistration !== false,
+      appLogo: appLogo !== undefined ? appLogo : ''
     });
+    broadcastRealtime('settings_updated', settings);
     res.json({ success: true, settings });
   });
 
@@ -561,22 +556,22 @@ ${formattedReviews}`;
     }
   });
 
-  // In production, serve the built frontend. In dev, Vite runs separately on port 5173.
-  if (process.env.NODE_ENV === 'production') {
+  // Serve static assets in production, otherwise Vite dev middleware
+  if (process.env.NODE_ENV !== 'production') {
+    app.get('/', (req, res) => {
+      res.send('CartLive Backend API running. Start frontend dev server via npm run dev');
+    });
+  } else {
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));
-    app.get('*', (_req, res) => {
+    // SPA fallback
+    app.get('*', (req, res) => {
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }
 
-  // Wait for MongoDB to connect and load all data BEFORE accepting any requests
-  console.log('⏳ Waiting for database to be ready...');
-  await dbInstance.ready;
-  console.log('✅ Database ready. Starting HTTP server...');
-
   app.listen(PORT, '0.0.0.0', () => {
-    console.log(`🚀 CartLive server running on Port ${PORT}`);
+    console.log(`Mobile Fruits & Vegetables Finder server booting on Port ${PORT}`);
   });
 }
 

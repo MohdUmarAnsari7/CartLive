@@ -63,7 +63,8 @@ const PushNotificationSchema = new mongoose.Schema({
 const SystemSettingsSchema = new mongoose.Schema({
   searchRadiusKm: { type: Number, default: 5 },
   allowSelfRegistration: { type: Boolean, default: true },
-  announcements: [String]
+  announcements: [String],
+  appLogo: { type: String, default: "" }
 }, { timestamps: true });
 
 const FeedbackSchema = new mongoose.Schema({
@@ -88,6 +89,7 @@ interface DatabaseSchema {
     searchRadiusKm: number;
     allowSelfRegistration: boolean;
     announcements: string[];
+    appLogo?: string;
   };
 }
 
@@ -105,7 +107,8 @@ export class FileDatabase {
       systemSettings: {
         searchRadiusKm: 5,
         allowSelfRegistration: true,
-        announcements: ['Welcome CartLive! Real-time local street cart maps sync.']
+        announcements: ['Welcome CartLive! Real-time local street cart maps sync.'],
+        appLogo: ''
       }
     };
     this.init();
@@ -133,7 +136,10 @@ export class FileDatabase {
             catalog: parsed.catalog || [],
             notifications: parsed.notifications || [],
             feedbacks: parsed.feedbacks || [],
-            systemSettings: parsed.systemSettings || this.data.systemSettings
+            systemSettings: {
+              ...this.data.systemSettings,
+              ...(parsed.systemSettings || {})
+            }
           };
           console.log(`💾 Restored state from local File Backup: ${this.data.sellers.length} sellers, ${this.data.feedbacks.length} feedbacks.`);
         }
@@ -182,7 +188,8 @@ export class FileDatabase {
         this.data.systemSettings = {
           searchRadiusKm: settings.searchRadiusKm || 5,
           allowSelfRegistration: settings.allowSelfRegistration !== undefined ? settings.allowSelfRegistration : true,
-          announcements: settings.announcements || []
+          announcements: settings.announcements || [],
+          appLogo: settings.appLogo || ''
         };
       }
       console.log(`📊 Restored state from MongoDB Atlas: ${this.data.sellers.length} sellers, ${this.data.catalog.length} catalog items.`);

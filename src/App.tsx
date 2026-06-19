@@ -51,6 +51,40 @@ export default function App() {
 
   // System parameters
   const [searchRadiusKm, setSearchRadiusKm] = useState(5);
+  const [appLogo, setAppLogo] = useState('');
+
+  useEffect(() => {
+    // Initial fetch of settings
+    fetch('/api/settings')
+      .then(res => {
+        if (res.ok) return res.json();
+      })
+      .then(data => {
+        if (data) {
+          if (data.searchRadiusKm) setSearchRadiusKm(data.searchRadiusKm);
+          if (data.appLogo !== undefined) setAppLogo(data.appLogo);
+        }
+      })
+      .catch(err => console.warn('Failed to fetch settings', err));
+
+    // Live stream synchronization
+    const eventSource = new EventSource('/api/realtime/stream');
+    eventSource.onmessage = (event) => {
+      try {
+        const { type, data } = JSON.parse(event.data);
+        if (type === 'settings_updated') {
+          if (data.searchRadiusKm) setSearchRadiusKm(data.searchRadiusKm);
+          if (data.appLogo !== undefined) setAppLogo(data.appLogo);
+        }
+      } catch (err) {
+        console.warn('Real-time sync parsed error', err);
+      }
+    };
+
+    return () => {
+      eventSource.close();
+    };
+  }, []);
 
   const handleLoginSuccess = (userRole: 'SELLER' | 'ADMIN', user: any) => {
     setRole(userRole);
@@ -91,9 +125,17 @@ export default function App() {
             onClick={() => setActiveTab('CUSTOMER')}
             className="flex items-center gap-2 cursor-pointer active:scale-95 transition-transform"
           >
-            <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center text-white shadow-md shadow-emerald-500/10 border border-emerald-500">
-              <ShoppingBag className="w-4.5 h-4.5 fill-none" />
-            </div>
+            {appLogo ? (
+              <img 
+                src={appLogo} 
+                alt="App Logo" 
+                className="w-8 h-8 rounded-lg object-cover shadow-md shadow-emerald-500/5 border border-slate-200" 
+              />
+            ) : (
+              <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center text-white shadow-md shadow-emerald-500/10 border border-emerald-500">
+                <ShoppingBag className="w-4.5 h-4.5 fill-none" />
+              </div>
+            )}
             <div>
               <h1 className="text-sm font-bold tracking-tight text-slate-900 flex items-center gap-1">
                 <span>{t('APP_NAME')}</span>
@@ -152,6 +194,7 @@ export default function App() {
               onLogout={handleLogout}
               systemRadius={searchRadiusKm}
               onUpdateRadius={(radius) => setSearchRadiusKm(radius)}
+              onUpdateLogo={(logo) => setAppLogo(logo)}
             />
           ) : (
             <div className="py-6 space-y-4">
