@@ -36,6 +36,12 @@ export default function CustomerDashboard({ apiKey, onNavigateToAuth, systemRadi
   // Geolocation states
   const [custLocation, setCustLocation] = useState<{ lat: number; lng: number }>({ lat: 12.9716, lng: 77.5946 }); // Default Bangalore Center
   const [fetchingGeo, setFetchingGeo] = useState(false);
+  const [geoError, setGeoError] = useState<string | null>(null);
+
+  // Address search geocoder states
+  const [locQuery, setLocQuery] = useState('');
+  const [locSearchLoading, setLocSearchLoading] = useState(false);
+  const [locSearchError, setLocSearchError] = useState<string | null>(null);
 
   // Interaction states
   const [selectedSeller, setSelectedSeller] = useState<Seller | null>(null);
@@ -52,6 +58,75 @@ export default function CustomerDashboard({ apiKey, onNavigateToAuth, systemRadi
   // AI Summary States
   const [aiSummary, setAiSummary] = useState('');
   const [aiSummaryLoading, setAiSummaryLoading] = useState(false);
+
+  const LOCATION_PRESETS = [
+    { name: '📍 Indiranagar (Carts Seed Block)', lat: 12.9784, lng: 77.6408 },
+    { name: 'Bangalore Center', lat: 12.9716, lng: 77.5946 },
+    { name: 'Delhi', lat: 28.6139, lng: 77.2090 },
+    { name: 'Mumbai', lat: 19.0760, lng: 72.8777 }
+  ];
+
+  const handleLocationSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!locQuery.trim()) return;
+    setLocSearchLoading(true);
+    setLocSearchError(null);
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(locQuery.trim())}&limit=1`, {
+        headers: {
+          'Accept': 'application/json',
+          'User-Agent': 'CartLiveMobileVegFruitCartFinder/1.0'
+        }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.length > 0) {
+          const result = data[0];
+          setCustLocation({
+            lat: parseFloat(result.lat),
+            lng: parseFloat(result.lon)
+          });
+          setLocQuery('');
+          setGeoError(null);
+        } else {
+          setLocSearchError('No matching location found.');
+        }
+      } else {
+        setLocSearchError('Failed to verify searched location.');
+      }
+    } catch (err) {
+      console.warn(err);
+      setLocSearchError('Location search is currently offline.');
+    } finally {
+      setLocSearchLoading(false);
+    }
+  };
+
+  const handleDeviceLocate = () => {
+    setFetchingGeo(true);
+    setGeoError(null);
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setCustLocation({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          });
+          setFetchingGeo(false);
+          setGeoError(null);
+        },
+        (error) => {
+          console.warn('getCurrentPosition error:', error);
+          setFetchingGeo(false);
+          setGeoError('GPS block: Check permission parameters under address bar.');
+        },
+        { enableHighAccuracy: true, timeout: 8000 }
+      );
+    } else {
+      setFetchingGeo(false);
+      setGeoError('GPS is not supported by your browser.');
+    }
+  };
 
   // Fetch sellers from database
   const getSellersList = async () => {
@@ -80,6 +155,22 @@ export default function CustomerDashboard({ apiKey, onNavigateToAuth, systemRadi
       setRecentVisitIds(JSON.parse(savedVisits));
     }
 
+    // Fetch approximate location using IP-based Geolocation first
+    const fetchIPLocation = async () => {
+      try {
+        const response = await fetch('https://ipapi.co/json/');
+        if (response.ok) {
+          const data = await response.json();
+          if (data && typeof data.latitude === 'number' && typeof data.longitude === 'number') {
+            setCustLocation({ lat: data.latitude, lng: data.longitude });
+          }
+        }
+      } catch (err) {
+        console.warn('IP-based geolocation fallback failed:', err);
+      }
+    };
+    fetchIPLocation();
+
     let customerWatchId: number | null = null;
     setFetchingGeo(true);
     if (navigator.geolocation) {
@@ -91,12 +182,18 @@ export default function CustomerDashboard({ apiKey, onNavigateToAuth, systemRadi
           };
           setCustLocation(userCoords);
           setFetchingGeo(false);
+          setGeoError(null);
         },
         (error) => {
           console.warn('Customer Geolocation tracking error:', error);
           setFetchingGeo(false);
+          if (error.code === error.PERMISSION_DENIED) {
+            setGeoError('GPS block: permission denied by iframe boundary.');
+          } else {
+            setGeoError('GPS block: system timeout. Adjust manually!');
+          }
         },
-        { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 }
+        { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 }
       );
     } else {
       setFetchingGeo(false);
@@ -281,7 +378,6 @@ export default function CustomerDashboard({ apiKey, onNavigateToAuth, systemRadi
 
       {/* Main stacked PWA Dashboard layout */}
       <div className="max-w-3xl mx-auto px-4 py-4 space-y-4 h-full">
-
         {/* Real Interactive Map Stage (First Sight!) */}
         <div className="bg-white rounded-2xl shadow-md border border-slate-100 overflow-hidden relative">
           <div className="bg-slate-50 p-3 px-4 text-xs font-semibold border-b border-slate-100 flex items-center justify-between text-slate-600">
@@ -289,13 +385,26 @@ export default function CustomerDashboard({ apiKey, onNavigateToAuth, systemRadi
               <Compass className="w-3.5 h-3.5 text-emerald-600 animate-pulse" />
               {t('LIVE_RADAR')}
             </span>
-            <button 
-              onClick={getSellersList} 
-              className="px-2.5 py-1 bg-white border border-slate-200 rounded-md text-[10px] sm:text-xs inline-flex items-center gap-1 text-slate-700 hover:bg-slate-50 font-bold active:scale-95 transition-all shadow-sm cursor-pointer"
-            >
-              <RefreshCw className="w-3 h-3 text-emerald-655" />
-              Sync
-            </button>
+            <div className="flex items-center gap-2">
+              {geoError && (
+                <span className="hidden sm:inline text-[9px] text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-100 font-bold">
+                  ⚠️ GPS Blocked
+                </span>
+              )}
+              <button 
+                onClick={getSellersList} 
+                className="px-2.5 py-1 bg-white border border-slate-200 rounded-md text-[10px] sm:text-xs inline-flex items-center gap-1 text-slate-700 hover:bg-slate-50 font-bold active:scale-95 transition-all shadow-sm cursor-pointer"
+              >
+                <RefreshCw className="w-3 h-3 text-emerald-655" />
+                Sync
+              </button>
+            </div>
+          </div>
+
+          {/* User Guide Accent Overlay */}
+          <div className="bg-emerald-50/70 p-2.5 px-4 text-[11px] font-medium text-emerald-800 border-b border-slate-100 flex items-center justify-between">
+            <span>📍 <strong>Tip:</strong> Tap anywhere on the map below or use coordinates to set your current location manually!</span>
+            <span className="hidden md:inline text-[9px] bg-emerald-600/10 text-emerald-700 px-1.5 py-0.5 rounded font-bold font-mono">MAP CLICKS ENABLED</span>
           </div>
 
           <div style={{ height: '340px', width: '100%', position: 'relative' }}>
@@ -306,7 +415,68 @@ export default function CustomerDashboard({ apiKey, onNavigateToAuth, systemRadi
               favorites={favorites}
               onSellerSelect={handleSellerSelect}
               selectedSellerId={selectedSeller?.id}
+              onMapClick={(coords) => {
+                setCustLocation(coords);
+                setGeoError(null);
+              }}
             />
+          </div>
+
+          {/* Advanced Manual Location Search Block */}
+          <div className="p-3 bg-slate-50 border-t border-slate-100 space-y-2.5">
+            <form onSubmit={handleLocationSearch} className="flex gap-2">
+              <input
+                type="text"
+                placeholder="🔍 Search address or city (e.g., Indiranagar, Mumbai, Sector 1 Delhi...)"
+                value={locQuery}
+                onChange={(e) => setLocQuery(e.target.value)}
+                className="flex-grow bg-white border border-slate-200 px-3 py-1.5 text-xs rounded-lg focus:outline-none focus:border-emerald-500 font-medium text-slate-800 shadow-inner"
+              />
+              <button
+                type="submit"
+                disabled={locSearchLoading}
+                className="px-3.5 py-1.5 bg-emerald-600 text-white text-xs font-bold rounded-lg hover:bg-emerald-700 active:scale-95 transition-all shadow-sm shrink-0 cursor-pointer disabled:opacity-60"
+              >
+                {locSearchLoading ? 'Searching...' : 'Go'}
+              </button>
+            </form>
+            {locSearchError && (
+              <p className="text-[10px] text-amber-600 font-bold bg-amber-50 p-1 px-2 rounded border border-amber-100">
+                ⚠️ {locSearchError}
+              </p>
+            )}
+
+            {/* Presets and Device Locate Control Row */}
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-slate-200/50">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Presets:</span>
+                {LOCATION_PRESETS.map((preset) => (
+                  <button
+                    key={preset.name}
+                    type="button"
+                    onClick={() => {
+                      setCustLocation({ lat: preset.lat, lng: preset.lng });
+                      setGeoError(null);
+                    }}
+                    className={`px-2 py-0.5 border rounded-full text-[10px] font-bold cursor-pointer transition-all ${
+                      Math.abs(custLocation.lat - preset.lat) < 0.005 && Math.abs(custLocation.lng - preset.lng) < 0.005
+                        ? 'bg-emerald-600 border-emerald-600 text-white'
+                        : 'bg-white hover:bg-slate-100 text-slate-600 border-slate-200 shadow-sm'
+                    }`}
+                  >
+                    {preset.name}
+                  </button>
+                ))}
+              </div>
+
+              <button
+                type="button"
+                onClick={handleDeviceLocate}
+                className="px-2 py-0.5 border border-dashed border-slate-300 hover:border-emerald-500 rounded text-[10px] font-bold text-slate-600 hover:text-emerald-700 bg-white inline-flex items-center gap-1 cursor-pointer shadow-xs"
+              >
+                🔄 Refresh GPS
+              </button>
+            </div>
           </div>
         </div>
 
@@ -340,11 +510,20 @@ export default function CustomerDashboard({ apiKey, onNavigateToAuth, systemRadi
             {/* Coordinates Badge */}
             <div className="shrink-0 text-left sm:text-right">
               {fetchingGeo ? (
-                <span className="text-[10px] text-slate-500 animate-pulse bg-slate-50 p-2 rounded block border border-dashed border-slate-200">
-                  Auto-detecting...
+                <span className="text-[10px] text-slate-505 text-emerald-750 animate-pulse bg-emerald-50/50 p-2 rounded block border border-dashed border-emerald-200">
+                  ⚡ Scanning auto-orbit...
                 </span>
+              ) : geoError ? (
+                <div className="text-[10px] text-right">
+                  <span className="bg-amber-50 p-2 rounded text-amber-700 block border border-amber-200 font-semibold leading-tight">
+                    📌 Using Manual Coordinates
+                  </span>
+                  <span className="text-[8px] text-slate-400 font-mono block mt-1">
+                    {custLocation.lat.toFixed(4)}, {custLocation.lng.toFixed(4)}
+                  </span>
+                </div>
               ) : (
-                <span className="text-[10px] bg-emerald-50/50 p-2 rounded text-emerald-800 inline-flex items-center gap-1 border border-emerald-100/50 font-mono">
+                <span className="text-[10px] bg-emerald-50/50 p-2 rounded text-emerald-800 inline-flex items-center gap-1 border border-emerald-100/50 font-mono shadow-sm">
                   <MapPin className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                   {custLocation.lat.toFixed(4)}, {custLocation.lng.toFixed(4)}
                 </span>

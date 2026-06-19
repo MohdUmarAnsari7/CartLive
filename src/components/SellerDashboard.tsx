@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
+import LeafletMap from './LeafletMap';
 import { 
   Check, 
   MapPin, 
@@ -34,6 +35,71 @@ export default function SellerDashboard({ seller, onLogout, onProfileUpdate }: S
   const [trackingIntervalId, setTrackingIntervalId] = useState<any>(null);
   const [currentCoords, setCurrentCoords] = useState<{ lat: number; lng: number } | null>(seller.location || null);
   const [coordsMsg, setCoordsMsg] = useState('');
+
+  // Manual location picker states
+  const [sellerLocQuery, setSellerLocQuery] = useState('');
+  const [sellerLocLoading, setSellerLocLoading] = useState(false);
+  const [sellerLocError, setSellerLocError] = useState<string | null>(null);
+
+  const updateLocationOnServer = async (newCoords: { lat: number; lng: number }, reason: string) => {
+    setCurrentCoords(newCoords);
+    lastSentCoordsRef.current = newCoords;
+    lastSentTimeRef.current = Date.now();
+
+    try {
+      const res = await fetch(`/api/sellers/${seller.id}/location`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ location: newCoords })
+      });
+      if (res.ok) {
+        setCoordsMsg(`🟢 Broadcast Active | ${reason} at ${new Date().toLocaleTimeString()}`);
+        onProfileUpdate({
+          ...seller,
+          location: newCoords,
+          lastLocationUpdate: new Date().toISOString()
+        });
+      }
+    } catch (e) {
+      setCoordsMsg('⚠️ Network: failed to broadcast updated coordinates.');
+    }
+  };
+
+  const handleSellerLocationSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!sellerLocQuery.trim()) return;
+    setSellerLocLoading(true);
+    setSellerLocError(null);
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(sellerLocQuery.trim())}&limit=1`, {
+        headers: {
+          'Accept': 'application/json',
+          'User-Agent': 'CartLiveMobileVegFruitCartFinder/1.0'
+        }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.length > 0) {
+          const result = data[0];
+          const newCoords = {
+            lat: parseFloat(result.lat),
+            lng: parseFloat(result.lon)
+          };
+          updateLocationOnServer(newCoords, 'Address search locator');
+          setSellerLocQuery('');
+        } else {
+          setSellerLocError('No matching location found.');
+        }
+      } else {
+        setSellerLocError('Could not verify searched address.');
+      }
+    } catch (err) {
+      console.warn(err);
+      setSellerLocError('Search geocoder service is currently unavailable.');
+    } finally {
+      setSellerLocLoading(false);
+    }
+  };
 
   const lastSentCoordsRef = useRef<{ lat: number; lng: number } | null>(seller.location || null);
   const lastSentTimeRef = useRef<number>(0);
@@ -136,22 +202,7 @@ export default function SellerDashboard({ seller, onLogout, onProfileUpdate }: S
       }
 
       if (shouldSend) {
-        setCurrentCoords(newCoords);
-        lastSentCoordsRef.current = newCoords;
-        lastSentTimeRef.current = now;
-
-        try {
-          const res = await fetch(`/api/sellers/${seller.id}/location`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ location: newCoords })
-          });
-          if (res.ok) {
-            setCoordsMsg(`🟢 Live GPS Active | ${reason} at ${new Date().toLocaleTimeString()}`);
-          }
-        } catch (e) {
-          setCoordsMsg('⚠️ Network: retrying next GPS event...');
-        }
+        await updateLocationOnServer(newCoords, `Live tracks (${reason})`);
       }
     };
 
@@ -211,8 +262,22 @@ export default function SellerDashboard({ seller, onLogout, onProfileUpdate }: S
               setCurrentCoords(userCoords);
               resolve(userCoords);
             },
-            () => {
-              userCoords = { lat: 12.9716, lng: 77.5946 };
+            async () => {
+              try {
+                const response = await fetch('https://ipapi.co/json/');
+                if (response.ok) {
+                  const data = await response.json();
+                  if (data && typeof data.latitude === 'number' && typeof data.longitude === 'number') {
+                    userCoords = { lat: data.latitude, lng: data.longitude };
+                  } else {
+                    userCoords = { lat: 12.9716, lng: 77.5946 };
+                  }
+                } else {
+                  userCoords = { lat: 12.9716, lng: 77.5946 };
+                }
+              } catch {
+                userCoords = { lat: 12.9716, lng: 77.5946 };
+              }
               setCurrentCoords(userCoords);
               resolve(userCoords);
             },
@@ -406,12 +471,98 @@ export default function SellerDashboard({ seller, onLogout, onProfileUpdate }: S
         </div>
       </div>
 
-      {coordsMsg && (
-        <div className="bg-slate-900 text-emerald-400 p-3 rounded-xl text-xs font-mono flex items-center gap-2 shadow-inner">
-          <MapPin className="w-4 h-4 text-emerald-500 animate-pulse" />
-          <span>{coordsMsg}</span>
+      <div className="bg-slate-900 text-emerald-400 p-3 rounded-xl text-xs font-mono flex items-center justify-between shadow-inner gap-4 flex-wrap">
+        <div className="flex items-center gap-2">
+          <MapPin className="w-4 h-4 text-emerald-500 animate-pulse shrink-0" />
+          <span>{coordsMsg || '📡 GPS Broadcast: Ready. Pin your operating location on the map below or search!'}</span>
         </div>
-      )}
+        {currentCoords && (
+          <span className="text-[10px] bg-slate-800 text-teal-300 px-2 py-0.5 rounded border border-slate-700 font-bold shrink-0">
+            {currentCoords.lat.toFixed(4)}, {currentCoords.lng.toFixed(4)}
+          </span>
+        )}
+      </div>
+
+      {/* Interactive Seller Node Map Selector */}
+      <div className="bg-white rounded-2xl border border-slate-100 shadow-md overflow-hidden p-4 sm:p-5 space-y-4">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-slate-50 pb-3 gap-2">
+          <div>
+            <h3 className="font-bold text-sm text-slate-850 flex items-center gap-1.5 font-sans">
+              📍 Map Location Setter (Backup Input)
+            </h3>
+            <p className="text-xs text-slate-500 mt-1">
+              Tap anywhere on the map or type/search an address below to set your vegetable/fruit cart's current operating position.
+            </p>
+          </div>
+          <span className="text-[9px] bg-emerald-600/10 text-emerald-700 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">
+            Active Cart Placement
+          </span>
+        </div>
+
+        <div style={{ height: '300px', width: '100%', position: 'relative' }} className="rounded-xl overflow-hidden border border-slate-200">
+          <LeafletMap
+            center={currentCoords || { lat: 12.9716, lng: 77.5946 }}
+            customerLocation={currentCoords || undefined}
+            sellers={currentCoords ? [{
+              ...seller,
+              location: currentCoords,
+              active: true,
+              products: sellerProducts
+            }] : []}
+            favorites={[]}
+            onMapClick={(coords) => {
+              updateLocationOnServer(coords, 'Map click placement');
+            }}
+          />
+        </div>
+
+        {/* Manual search and major test city fast offsets */}
+        <div className="space-y-2.5 text-xs">
+          <form onSubmit={handleSellerLocationSearch} className="flex gap-2">
+            <input
+              type="text"
+              placeholder="🔍 Search operating street, landmark or city (e.g. Indiranagar Metro, Delhi, Mumbai...)"
+              value={sellerLocQuery}
+              onChange={(e) => setSellerLocQuery(e.target.value)}
+              className="flex-grow bg-slate-50 border border-slate-250 px-3 py-2 rounded-lg font-medium shadow-inner focus:outline-none focus:border-emerald-500 focus:bg-white text-slate-800 text-xs sm:text-sm"
+            />
+            <button
+              type="submit"
+              disabled={sellerLocLoading}
+              className="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-lg font-bold shadow-sm cursor-pointer disabled:opacity-60 transition-all text-xs"
+            >
+              {sellerLocLoading ? 'Locating...' : 'Set Location'}
+            </button>
+          </form>
+          {sellerLocError && (
+            <p className="text-[10px] text-amber-600 font-bold bg-amber-50 p-1 px-2 rounded border border-amber-100">
+              ⚠️ {sellerLocError}
+            </p>
+          )}
+
+          {/* Quick Sandbox preset offsets to place sellers right near the simulated customers! */}
+          <div className="flex flex-wrap items-center gap-1.5 pt-2.5 border-t border-slate-100 flex-row">
+            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Test Sandbox presets:</span>
+            {[
+              { name: '📍 Near Indiranagar Carts (Suggested Hub)', lat: 12.9784, lng: 77.6408 },
+              { name: 'Bangalore Center', lat: 12.9716, lng: 77.5946 },
+              { name: 'Delhi', lat: 28.6139, lng: 77.2090 },
+              { name: 'Mumbai', lat: 19.0760, lng: 72.8777 }
+            ].map((preset) => (
+              <button
+                key={preset.name}
+                type="button"
+                onClick={() => {
+                  updateLocationOnServer({ lat: preset.lat, lng: preset.lng }, `Preset '${preset.name}'`);
+                }}
+                className="px-2.5 py-1 border border-slate-200 hover:border-emerald-500 rounded-full bg-white hover:bg-slate-50 text-[10px] font-bold text-slate-600 hover:text-emerald-700 shadow-xs cursor-pointer transition-all"
+              >
+                {preset.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
 
       {/* Main body modules config: Daily Offering Management & Profile/AI card */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">

@@ -37,6 +37,7 @@ export default function AdminDashboard({ apiKey, onLogout, systemRadius, onUpdat
   const [catalog, setCatalog] = useState<Product[]>([]);
   const [notifications, setNotifications] = useState<PushNotification[]>([]);
   const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
+  const [adminLocation, setAdminLocation] = useState<{ lat: number; lng: number }>({ lat: 12.9716, lng: 77.5946 });
   
   // Create product definition state
   const [prodName, setProdName] = useState('');
@@ -87,6 +88,38 @@ export default function AdminDashboard({ apiKey, onLogout, systemRadius, onUpdat
 
   useEffect(() => {
     fetchAdminDetails();
+
+    // Fetch approximate location using IP-based Geolocation first for Admin
+    const fetchAdminIPLocation = async () => {
+      try {
+        const response = await fetch('https://ipapi.co/json/');
+        if (response.ok) {
+          const data = await response.json();
+          if (data && typeof data.latitude === 'number' && typeof data.longitude === 'number') {
+            setAdminLocation({ lat: data.latitude, lng: data.longitude });
+          }
+        }
+      } catch (err) {
+        console.warn('Admin IP-based geolocation fallback failed:', err);
+      }
+    };
+    fetchAdminIPLocation();
+
+    // Request full accuracy device GPS
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setAdminLocation({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          });
+        },
+        (error) => {
+          console.warn('Admin Geolocation physical watch failed:', error);
+        },
+        { enableHighAccuracy: true, timeout: 5000 }
+      );
+    }
 
     const eventSource = new EventSource('/api/realtime/stream');
     eventSource.onmessage = (event) => {
@@ -581,7 +614,8 @@ export default function AdminDashboard({ apiKey, onLogout, systemRadius, onUpdat
 
             <div style={{ height: '330px', width: '100%', position: 'relative' }}>
               <LeafletMap
-                center={{ lat: 12.9716, lng: 77.5946 }}
+                center={adminLocation}
+                customerLocation={adminLocation}
                 sellers={sellers.filter(s => s.active && s.location)}
                 favorites={[]}
                 onSellerSelect={(s) => setActiveWindowId(s.id)}
