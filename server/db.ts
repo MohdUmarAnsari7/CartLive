@@ -94,8 +94,6 @@ interface DatabaseSchema {
 export class FileDatabase {
   private data: DatabaseSchema;
   private isConnectedToMongo: boolean = false;
-  /** Resolves once MongoDB has connected and all data has been loaded (or failed). */
-  public ready: Promise<void>;
 
   constructor() {
     // Initial data is clean and empty
@@ -107,11 +105,10 @@ export class FileDatabase {
       systemSettings: {
         searchRadiusKm: 5,
         allowSelfRegistration: true,
-        announcements: ['Welcome FreshTrack! Real-time local street cart maps sync.']
+        announcements: ['Welcome CartLive! Real-time local street cart maps sync.']
       }
     };
-    // Store the init promise so callers can await DB readiness before serving requests
-    this.ready = this.init();
+    this.init();
   }
 
   private saveLocalBackup() {

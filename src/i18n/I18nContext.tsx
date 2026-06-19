@@ -4,7 +4,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 export const translations = {
   en: {
     // Header & Footer
-    APP_NAME: "FreshTrack",
+    APP_NAME: "CartLive",
     GPS_SUBTITLE: "GPS Street Cart Finder",
     DISCOVER_CARTS_TAB: "Discover Carts",
     SELLER_CENTER_TAB: "Seller Center",
@@ -125,7 +125,7 @@ export const translations = {
     OFFERINGS_REMOVE_BTN: "Remove Item",
 
     // Admin Dashboard
-    ADMIN_WELCOME_HEADING: "FreshTrack Admin Control Center",
+    ADMIN_WELCOME_HEADING: "CartLive Admin Control Center",
     ADMIN_RADIUS_CFG: "Central Discovery Radial Limit Parameter",
     ADMIN_RADIUS_VALUE: "Search limit: {radius} km",
     ADMIN_CATALOGUE_HEADING: "Master Agricultural Item Catalog Definitions",
@@ -172,7 +172,7 @@ export const translations = {
   },
   hi: {
     // Header & Footer
-    APP_NAME: "फ़्रेशट्रैक",
+    APP_NAME: "कार्टलाइव",
     GPS_SUBTITLE: "जीपीएस ठेला खोजक",
     DISCOVER_CARTS_TAB: "ठेले खोजें",
     SELLER_CENTER_TAB: "विक्रेता केंद्र",
@@ -293,7 +293,7 @@ export const translations = {
     OFFERINGS_REMOVE_BTN: "सूची से हटाएं",
 
     // Admin Dashboard
-    ADMIN_WELCOME_HEADING: "प्रशासनिक नियंत्रण केंद्र (फ़्रेशट्रैक एडमिन)",
+    ADMIN_WELCOME_HEADING: "प्रशासनिक नियंत्रण केंद्र (कार्टलाइव एडमिन)",
     ADMIN_RADIUS_CFG: "केंद्रीय खोज दूरी दायरा सीमा",
     ADMIN_RADIUS_VALUE: "अधिकतम दूरी सीमा: {radius} किमी",
     ADMIN_CATALOGUE_HEADING: "कृषि फल और सब्जी मास्टर कैटलॉग",
@@ -352,13 +352,13 @@ const I18nContext = createContext<I18nContextProps | undefined>(undefined);
 
 export const I18nProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [locale, setLocaleState] = useState<Locale>(() => {
-    const saved = localStorage.getItem('freshtrack_locale');
+    const saved = localStorage.getItem('cartlive_locale');
     return (saved === 'hi' || saved === 'en') ? saved : 'en';
   });
 
   const setLocale = (l: Locale) => {
     setLocaleState(l);
-    localStorage.setItem('freshtrack_locale', l);
+    localStorage.setItem('cartlive_locale', l);
   };
 
   const t = (key: keyof typeof translations['en'], variables?: Record<string, string | number>): string => {

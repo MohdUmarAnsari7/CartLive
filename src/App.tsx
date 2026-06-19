@@ -29,11 +29,11 @@ type ActiveTab = 'CUSTOMER' | 'SELLER' | 'ADMIN' | 'FEEDBACK';
 export default function App() {
   // Auth state variables
   const [role, setRole] = useState<'SELLER' | 'ADMIN' | null>(() => {
-    const saved = localStorage.getItem('freshtrack_role');
+    const saved = localStorage.getItem('cartlive_role');
     return (saved === 'SELLER' || saved === 'ADMIN') ? saved : null;
   });
   const [loggedInUser, setLoggedInUser] = useState<any>(() => {
-    const saved = localStorage.getItem('freshtrack_user');
+    const saved = localStorage.getItem('cartlive_user');
     try {
       return saved ? JSON.parse(saved) : null;
     } catch {
@@ -42,7 +42,7 @@ export default function App() {
   });
 
   const [activeTab, setActiveTab] = useState<ActiveTab>(() => {
-    const savedRole = localStorage.getItem('freshtrack_role');
+    const savedRole = localStorage.getItem('cartlive_role');
     if (savedRole === 'SELLER') return 'SELLER';
     if (savedRole === 'ADMIN') return 'ADMIN';
     return 'CUSTOMER';
@@ -55,8 +55,8 @@ export default function App() {
   const handleLoginSuccess = (userRole: 'SELLER' | 'ADMIN', user: any) => {
     setRole(userRole);
     setLoggedInUser(user);
-    localStorage.setItem('freshtrack_role', userRole);
-    localStorage.setItem('freshtrack_user', JSON.stringify(user));
+    localStorage.setItem('cartlive_role', userRole);
+    localStorage.setItem('cartlive_user', JSON.stringify(user));
     if (userRole === 'SELLER') {
       setActiveTab('SELLER');
     } else if (userRole === 'ADMIN') {
@@ -67,14 +67,14 @@ export default function App() {
   const handleLogout = () => {
     setRole(null);
     setLoggedInUser(null);
-    localStorage.removeItem('freshtrack_role');
-    localStorage.removeItem('freshtrack_user');
+    localStorage.removeItem('cartlive_role');
+    localStorage.removeItem('cartlive_user');
     setActiveTab('CUSTOMER');
   };
 
   const handleProfileUpdate = (updatedSeller: any) => {
     setLoggedInUser(updatedSeller);
-    localStorage.setItem('freshtrack_user', JSON.stringify(updatedSeller));
+    localStorage.setItem('cartlive_user', JSON.stringify(updatedSeller));
   };
 
   return (
@@ -234,26 +234,6 @@ export default function App() {
           </button>
         </div>
       </nav>
-
-      {/* Modern humble footer */}
-      <footer className="bg-slate-900 text-slate-500 py-6 border-t border-slate-800 text-xs">
-        <div className="max-w-7xl mx-auto px-4 flex flex-col md:flex-row items-center justify-between gap-4 text-center">
-          <div>
-            <p className="font-extrabold text-slate-300">{t('FOOTER_TITLE')}</p>
-            <p className="text-[10px] text-slate-500 mt-1 leading-normal">
-              {t('FOOTER_DESC')}
-            </p>
-          </div>
-          <div className="flex items-center gap-4 text-slate-400 font-semibold text-[11px]">
-            <span>✓ {t('FOOTER_TRACKING')}</span>
-            <span>•</span>
-            <span>✓ {t('FOOTER_NOTIF')}</span>
-            <span>•</span>
-            <span>✓ {t('FOOTER_SESSION')}</span>
-          </div>
-          <p className="text-[10px] text-slate-655">{t('FOOTER_RIGHTS')}</p>
-        </div>
-      </footer>
     </div>
   );
 }
