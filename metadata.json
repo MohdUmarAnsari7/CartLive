@@ -1,6 +1,10 @@
 {
-  "name": "Mobile Veg & Fruit Cart Finder",
+  "name": "Remix: Mobile Veg \u0026 Fruit Cart Finder",
   "description": "Real-time PWA connecting customers with mobile vegetable and fruit cart sellers (pourmen) with live location tracking, catalog pricing, and ratings.",
-  "requestFramePermissions": ["geolocation"],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "requestFramePermissions": [
+    "geolocation"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
 }

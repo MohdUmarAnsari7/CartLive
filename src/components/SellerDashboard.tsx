@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { 
   Check, 
   MapPin, 
@@ -34,6 +34,10 @@ export default function SellerDashboard({ seller, onLogout, onProfileUpdate }: S
   const [trackingIntervalId, setTrackingIntervalId] = useState<any>(null);
   const [currentCoords, setCurrentCoords] = useState<{ lat: number; lng: number } | null>(seller.location || null);
   const [coordsMsg, setCoordsMsg] = useState('');
+
+  const lastSentCoordsRef = useRef<{ lat: number; lng: number } | null>(seller.location || null);
+  const lastSentTimeRef = useRef<number>(0);
+  const watchIdRef = useRef<number | null>(null);
 
   // Daily catalog management
   const [catalog, setCatalog] = useState<Product[]>([]);
@@ -72,7 +76,9 @@ export default function SellerDashboard({ seller, onLogout, onProfileUpdate }: S
     }
 
     return () => {
-      if (trackingIntervalId) clearInterval(trackingIntervalId);
+      if (watchIdRef.current !== null) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+      }
     };
   }, []);
 
@@ -83,48 +89,105 @@ export default function SellerDashboard({ seller, onLogout, onProfileUpdate }: S
       return;
     }
 
-    setCoordsMsg('⏳ Connecting...');
-    
-    const sendLocation = () => {
-      navigator.geolocation.getCurrentPosition(
-        async (position) => {
-          const coords = {
-            lat: position.coords.latitude,
-            lng: position.coords.longitude
-          };
-          setCurrentCoords(coords);
+    setCoordsMsg('⏳ Connecting real-time GPS watch...');
 
-          try {
-            const res = await fetch(`/api/sellers/${seller.id}/location`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ location: coords })
-            });
-            if (res.ok) {
-              setCoordsMsg(`🟢 Broadcast synchronised (${new Date().toLocaleTimeString()})`);
-            }
-          } catch (e) {
-            setCoordsMsg('⚠️ LAG: location retry queued...');
-          }
-        },
-        (error) => {
-          setCoordsMsg('⚠️ Check GPS permission details in applet.');
-          console.warn('GPS tracking error', error);
-        },
-        { enableHighAccuracy: true }
-      );
+    const getDistanceMeters = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+      const R = 6371e3; // meters
+      const dLat = ((lat2 - lat1) * Math.PI) / 180;
+      const dLon = ((lon2 - lon1) * Math.PI) / 180;
+      const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return R * c;
     };
 
-    sendLocation();
-    const interval = setInterval(sendLocation, 15000);
-    setTrackingIntervalId(interval);
+    const handlePositionUpdate = async (position: GeolocationPosition) => {
+      const lat = position.coords.latitude;
+      const lng = position.coords.longitude;
+      const newCoords = { lat, lng };
+
+      const now = Date.now();
+      const lastCoords = lastSentCoordsRef.current;
+      const lastTime = lastSentTimeRef.current;
+
+      let shouldSend = false;
+      let reason = '';
+
+      if (!lastCoords) {
+        shouldSend = true;
+        reason = 'Initial location';
+      } else {
+        const distance = getDistanceMeters(lastCoords.lat, lastCoords.lng, lat, lng);
+        const timeElapsedSecs = (now - lastTime) / 1000;
+
+        // If moved more than 10 meters, send immediately (if at least 3 seconds have passed between packets)
+        if (distance >= 10) {
+          if (timeElapsedSecs >= 3) {
+            shouldSend = true;
+            reason = `Moved ${distance.toFixed(1)}m (live track)`;
+          }
+        } 
+        // stationary update: keep alive every 15 seconds so customer can see actual location instantly if it changes
+        else if (timeElapsedSecs >= 15) {
+          shouldSend = true;
+          reason = `Timer sync (last moved ${distance.toFixed(1)}m)`;
+        }
+      }
+
+      if (shouldSend) {
+        setCurrentCoords(newCoords);
+        lastSentCoordsRef.current = newCoords;
+        lastSentTimeRef.current = now;
+
+        try {
+          const res = await fetch(`/api/sellers/${seller.id}/location`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ location: newCoords })
+          });
+          if (res.ok) {
+            setCoordsMsg(`🟢 Live GPS Active | ${reason} at ${new Date().toLocaleTimeString()}`);
+          }
+        } catch (e) {
+          setCoordsMsg('⚠️ Network: retrying next GPS event...');
+        }
+      }
+    };
+
+    const handlePositionError = (error: GeolocationPositionError) => {
+      let friendlyMsg = '⚠️ GPS error. Check location access.';
+      if (error.code === error.PERMISSION_DENIED) {
+        friendlyMsg = '⚠️ GPS Access Denied. Enable permissions.';
+      }
+      setCoordsMsg(friendlyMsg);
+      console.warn('GPS tracking watch error', error);
+    };
+
+    // Clean any prior watch active
+    if (watchIdRef.current !== null) {
+      navigator.geolocation.clearWatch(watchIdRef.current);
+    }
+
+    const watchId = navigator.geolocation.watchPosition(
+      handlePositionUpdate,
+      handlePositionError,
+      { 
+        enableHighAccuracy: true, 
+        maximumAge: 0,
+        timeout: 10000
+      }
+    );
+    watchIdRef.current = watchId;
+    setTrackingIntervalId(watchId);
   };
 
   const stopLiveTracking = () => {
-    if (trackingIntervalId) {
-      clearInterval(trackingIntervalId);
-      setTrackingIntervalId(null);
+    if (watchIdRef.current !== null) {
+      navigator.geolocation.clearWatch(watchIdRef.current);
+      watchIdRef.current = null;
     }
+    setTrackingIntervalId(null);
     setCoordsMsg('');
   };
 

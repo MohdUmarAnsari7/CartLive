@@ -63,13 +63,7 @@ export default function LeafletMap({
     const map = mapInstanceRef.current;
     if (!map) return;
 
-    // Clear old customer marker
-    if (customerMarkerRef.current) {
-      customerMarkerRef.current.remove();
-      customerMarkerRef.current = null;
-    }
-
-    // Add new customer marker
+    // Optimized customer location marker update
     if (customerLocation) {
       const customerHtml = `
         <div class="relative flex items-center justify-center" style="width: 24px; height: 24px;">
@@ -84,26 +78,32 @@ export default function LeafletMap({
         iconAnchor: [12, 12],
       });
 
-      customerMarkerRef.current = L.marker([customerLocation.lat, customerLocation.lng], { icon: customerIcon })
-        .addTo(map)
-        .bindPopup(`
-          <div class="p-1 text-xs text-slate-800 font-sans font-bold">
-            📍 Your Current Location
-          </div>
-        `);
+      if (customerMarkerRef.current) {
+        customerMarkerRef.current.setLatLng([customerLocation.lat, customerLocation.lng]);
+      } else {
+        customerMarkerRef.current = L.marker([customerLocation.lat, customerLocation.lng], { icon: customerIcon })
+          .addTo(map)
+          .bindPopup(`
+            <div class="p-1 text-xs text-slate-800 font-sans font-bold">
+              📍 Your Current Location
+            </div>
+          `);
+      }
+    } else {
+      if (customerMarkerRef.current) {
+        customerMarkerRef.current.remove();
+        customerMarkerRef.current = null;
+      }
     }
 
-    // Clear existing seller markers
-    Object.keys(markersRef.current).forEach((id) => {
-      markersRef.current[id].remove();
-    });
-    markersRef.current = {};
+    // Keep track of markers we are keeping
+    const activeMarkerIds = new Set<string>();
 
-    // Add seller markers
     sellers.forEach((seller) => {
       if (!seller.location) return;
 
       const sId = seller.id;
+      activeMarkerIds.add(sId);
       const isFav = favorites.includes(sId);
       const minPrice = seller.products.length > 0 ? Math.min(...seller.products.map((p) => p.price)) : '—';
 
@@ -125,13 +125,6 @@ export default function LeafletMap({
         </div>
       `;
 
-      const sellerIcon = L.divIcon({
-        html: sellerHtml,
-        className: 'custom-seller-marker-class',
-        iconSize: [46, 46],
-        iconAnchor: [23, 23],
-      });
-
       const popupHtml = `
         <div class="p-2 space-y-1 font-sans text-slate-800" style="max-width: 180px;">
           <div class="font-bold text-slate-900 border-b pb-1 mb-1">
@@ -147,16 +140,40 @@ export default function LeafletMap({
         </div>
       `;
 
-      const marker = L.marker([seller.location.lat, seller.location.lng], { icon: sellerIcon })
-        .addTo(map)
-        .bindPopup(popupHtml, { closeButton: false })
-        .on('click', () => {
-          if (onSellerSelect) {
-            onSellerSelect(seller);
-          }
-        });
+      const sellerIcon = L.divIcon({
+        html: sellerHtml,
+        className: 'custom-seller-marker-class',
+        iconSize: [46, 46],
+        iconAnchor: [23, 23],
+      });
 
-      markersRef.current[sId] = marker;
+      if (markersRef.current[sId]) {
+        // Smoothly set its updated LatLng, Popup content and Icon without resetting fully!
+        const existingMarker = markersRef.current[sId];
+        existingMarker.setLatLng([seller.location.lat, seller.location.lng]);
+        existingMarker.setPopupContent(popupHtml);
+        existingMarker.setIcon(sellerIcon);
+      } else {
+        // Add new marker
+        const marker = L.marker([seller.location.lat, seller.location.lng], { icon: sellerIcon })
+          .addTo(map)
+          .bindPopup(popupHtml, { closeButton: false })
+          .on('click', () => {
+            if (onSellerSelect) {
+              onSellerSelect(seller);
+            }
+          });
+
+        markersRef.current[sId] = marker;
+      }
+    });
+
+    // Remove obsolete markers that are no longer present or active
+    Object.keys(markersRef.current).forEach((id) => {
+      if (!activeMarkerIds.has(id)) {
+        markersRef.current[id].remove();
+        delete markersRef.current[id];
+      }
     });
   }, [sellers, favorites, customerLocation]);
 

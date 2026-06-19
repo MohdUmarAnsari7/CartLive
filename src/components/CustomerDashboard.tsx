@@ -80,9 +80,10 @@ export default function CustomerDashboard({ apiKey, onNavigateToAuth, systemRadi
       setRecentVisitIds(JSON.parse(savedVisits));
     }
 
+    let customerWatchId: number | null = null;
     setFetchingGeo(true);
     if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
+      customerWatchId = navigator.geolocation.watchPosition(
         (position) => {
           const userCoords = {
             lat: position.coords.latitude,
@@ -92,10 +93,10 @@ export default function CustomerDashboard({ apiKey, onNavigateToAuth, systemRadi
           setFetchingGeo(false);
         },
         (error) => {
-          console.warn('Geolocation access rejected, fallback to default.', error);
+          console.warn('Customer Geolocation tracking error:', error);
           setFetchingGeo(false);
         },
-        { enableHighAccuracy: true, timeout: 5000 }
+        { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 }
       );
     } else {
       setFetchingGeo(false);
@@ -147,6 +148,9 @@ export default function CustomerDashboard({ apiKey, onNavigateToAuth, systemRadi
 
     return () => {
       eventSource.close();
+      if (customerWatchId !== null) {
+        navigator.geolocation.clearWatch(customerWatchId);
+      }
     };
   }, []);
 

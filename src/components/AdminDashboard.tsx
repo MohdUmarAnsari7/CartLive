@@ -704,16 +704,15 @@ export default function AdminDashboard({ apiKey, onLogout, systemRadius, onUpdat
                       <p className="font-bold text-slate-700 text-[11px]">Click or drag system image</p>
                       <p className="text-[9px] text-slate-400">PNG, JPG, SVG or WebP</p>
                     </div>
+                    <input 
+                      type="file" 
+                      ref={fileInputRef}
+                      onChange={handleFileChange}
+                      accept="image/*" 
+                      className="hidden" 
+                    />
                   </div>
                 )}
-                <input 
-                  type="file" 
-                  ref={fileInputRef}
-                  onChange={handleFileChange}
-                  accept="image/*" 
-                  className="hidden" 
-                  onClick={(e) => e.stopPropagation()}
-                />
               </div>
 
               <button

@@ -4,7 +4,7 @@
       "_id": "6a3443761e93fcbb6590e6fa",
       "id": "seller_1781810038574",
       "__v": 0,
-      "active": false,
+      "active": true,
       "avgRating": 0,
       "cartInfo": "d",
       "createdAt": "2026-06-18T19:13:58.575Z",
@@ -52,19 +52,19 @@
       "ratingsCount": 0,
       "reviews": [],
       "serviceArea": "f",
-      "updatedAt": "2026-06-19T15:11:48.185Z",
-      "visitsCount": 4,
-      "lastLocationUpdate": "2026-06-19T15:11:48.183Z",
+      "updatedAt": "2026-06-19T17:58:21.432Z",
+      "visitsCount": 5,
+      "lastLocationUpdate": "2026-06-19T17:59:43.529Z",
       "location": {
-        "lat": 22.731817992885265,
-        "lng": 75.91305791621953
+        "lat": 22.73180923804586,
+        "lng": 75.91302811994882
       }
     },
     {
       "_id": "6a352a6f1e93fcbb659116d5",
       "id": "seller_1781869167187",
       "__v": 0,
-      "active": true,
+      "active": false,
       "avgRating": 0,
       "cartInfo": "cart",
       "createdAt": "2026-06-19T11:39:27.189Z",
@@ -90,12 +90,12 @@
       "ratingsCount": 0,
       "reviews": [],
       "serviceArea": "mdkf",
-      "updatedAt": "2026-06-19T15:07:29.613Z",
-      "visitsCount": 2,
-      "lastLocationUpdate": "2026-06-19T11:45:45.613Z",
+      "updatedAt": "2026-06-19T17:58:37.173Z",
+      "visitsCount": 5,
+      "lastLocationUpdate": "2026-06-19T17:58:36.778Z",
       "location": {
-        "lat": 22.731812076923077,
-        "lng": 75.91307138461538
+        "lat": 22.731810037872474,
+        "lng": 75.91300734667101
       }
     }
   ],
@@ -180,6 +180,15 @@
   ],
   "notifications": [
     {
+      "id": "n_1781891983451",
+      "timestamp": "2026-06-19T17:59:43.451Z",
+      "sellerId": "seller_1781810038574",
+      "sellerName": "umar",
+      "title": "umar is now Online!",
+      "body": "Catch him in action delivering fresh items around f.",
+      "type": "activation"
+    },
+    {
       "_id": "6a3443861e93fcbb6590e6ff",
       "id": "n_1781810054458",
       "__v": 0,
@@ -217,6 +226,123 @@
       "title": "ali is now Online!",
       "type": "activation",
       "updatedAt": "2026-06-19T11:39:37.683Z"
+    },
+    {
+      "_id": "6a357d631e93fcbb65912718",
+      "id": "n_1781890402336",
+      "__v": 0,
+      "body": "Catch him in action delivering fresh items around f.",
+      "createdAt": "2026-06-19T17:33:22.348Z",
+      "sellerId": "seller_1781810038574",
+      "sellerName": "umar",
+      "timestamp": "2026-06-19T17:33:22.336Z",
+      "title": "umar is now Online!",
+      "type": "activation",
+      "updatedAt": "2026-06-19T17:33:22.348Z"
+    },
+    {
+      "_id": "6a357d6b1e93fcbb65912719",
+      "id": "n_1781890410933",
+      "__v": 0,
+      "body": "Catch him in action delivering fresh items around f.",
+      "createdAt": "2026-06-19T17:33:30.943Z",
+      "sellerId": "seller_1781810038574",
+      "sellerName": "umar",
+      "timestamp": "2026-06-19T17:33:30.933Z",
+      "title": "umar is now Online!",
+      "type": "activation",
+      "updatedAt": "2026-06-19T17:33:30.943Z"
+    },
+    {
+      "_id": "6a357d6c1e93fcbb6591271a",
+      "id": "n_1781890411410",
+      "__v": 0,
+      "body": "Catch him in action delivering fresh items around f.",
+      "createdAt": "2026-06-19T17:33:31.418Z",
+      "sellerId": "seller_1781810038574",
+      "sellerName": "umar",
+      "timestamp": "2026-06-19T17:33:31.410Z",
+      "title": "umar is now Online!",
+      "type": "activation",
+      "updatedAt": "2026-06-19T17:33:31.418Z"
+    },
+    {
+      "_id": "6a3582551e93fcbb659127c5",
+      "id": "n_1781891668629",
+      "__v": 0,
+      "body": "Catch him in action delivering fresh items around f.",
+      "createdAt": "2026-06-19T17:54:28.644Z",
+      "sellerId": "seller_1781810038574",
+      "sellerName": "umar",
+      "timestamp": "2026-06-19T17:54:28.629Z",
+      "title": "umar is now Online!",
+      "type": "activation",
+      "updatedAt": "2026-06-19T17:54:28.644Z"
+    },
+    {
+      "_id": "6a3582681e93fcbb659127cc",
+      "id": "n_1781891687406",
+      "__v": 0,
+      "body": "Catch him in action delivering fresh items around f.",
+      "createdAt": "2026-06-19T17:54:47.417Z",
+      "sellerId": "seller_1781810038574",
+      "sellerName": "umar",
+      "timestamp": "2026-06-19T17:54:47.406Z",
+      "title": "umar is now Online!",
+      "type": "activation",
+      "updatedAt": "2026-06-19T17:54:47.417Z"
+    },
+    {
+      "_id": "6a3582691e93fcbb659127cd",
+      "id": "n_1781891689072",
+      "__v": 0,
+      "body": "Catch him in action delivering fresh items around f.",
+      "createdAt": "2026-06-19T17:54:49.082Z",
+      "sellerId": "seller_1781810038574",
+      "sellerName": "umar",
+      "timestamp": "2026-06-19T17:54:49.072Z",
+      "title": "umar is now Online!",
+      "type": "activation",
+      "updatedAt": "2026-06-19T17:54:49.082Z"
+    },
+    {
+      "_id": "6a3582851e93fcbb659127d3",
+      "id": "n_1781891717066",
+      "__v": 0,
+      "body": "Catch him in action delivering fresh items around f.",
+      "createdAt": "2026-06-19T17:55:17.081Z",
+      "sellerId": "seller_1781810038574",
+      "sellerName": "umar",
+      "timestamp": "2026-06-19T17:55:17.066Z",
+      "title": "umar is now Online!",
+      "type": "activation",
+      "updatedAt": "2026-06-19T17:55:17.081Z"
+    },
+    {
+      "_id": "6a35828d1e93fcbb659127d4",
+      "id": "n_1781891725001",
+      "__v": 0,
+      "body": "Catch him in action delivering fresh items around f.",
+      "createdAt": "2026-06-19T17:55:25.013Z",
+      "sellerId": "seller_1781810038574",
+      "sellerName": "umar",
+      "timestamp": "2026-06-19T17:55:25.001Z",
+      "title": "umar is now Online!",
+      "type": "activation",
+      "updatedAt": "2026-06-19T17:55:25.013Z"
+    },
+    {
+      "_id": "6a35833b1e93fcbb659127e1",
+      "id": "n_1781891899913",
+      "__v": 0,
+      "body": "Catch him in action delivering fresh items around f.",
+      "createdAt": "2026-06-19T17:58:19.926Z",
+      "sellerId": "seller_1781810038574",
+      "sellerName": "umar",
+      "timestamp": "2026-06-19T17:58:19.913Z",
+      "title": "umar is now Online!",
+      "type": "activation",
+      "updatedAt": "2026-06-19T17:58:19.926Z"
     }
   ],
   "feedbacks": [
