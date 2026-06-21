@@ -1,6 +1,6 @@
-import 'dotenv/config';
 import express from 'express';
 import path from 'path';
+import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI } from '@google/genai';
 import { dbInstance } from './server/db';
 import { Seller, SellerProduct, Review } from './src/types';
@@ -558,9 +558,11 @@ ${formattedReviews}`;
 
   // Serve static assets in production, otherwise Vite dev middleware
   if (process.env.NODE_ENV !== 'production') {
-    app.get('/', (req, res) => {
-      res.send('CartLive Backend API running. Start frontend dev server via npm run dev');
+    const vite = await createViteServer({
+      server: { middlewareMode: true },
+      appType: 'spa',
     });
+    app.use(vite.middlewares);
   } else {
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));
