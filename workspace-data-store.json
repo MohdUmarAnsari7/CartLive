@@ -4,7 +4,7 @@
       "_id": "6a3443761e93fcbb6590e6fa",
       "id": "seller_1781810038574",
       "__v": 0,
-      "active": false,
+      "active": true,
       "avgRating": 0,
       "cartInfo": "d",
       "createdAt": "2026-06-18T19:13:58.575Z",
@@ -52,12 +52,12 @@
       "ratingsCount": 0,
       "reviews": [],
       "serviceArea": "f",
-      "updatedAt": "2026-06-19T18:14:05.301Z",
-      "visitsCount": 7,
-      "lastLocationUpdate": "2026-06-19T18:18:13.991Z",
+      "updatedAt": "2026-06-21T16:40:06.533Z",
+      "visitsCount": 12,
+      "lastLocationUpdate": "2026-06-21T16:40:02.220Z",
       "location": {
-        "lat": 22.73181007292007,
-        "lng": 75.91294844119646
+        "lat": 22.731816348606234,
+        "lng": 75.91305420415966
       }
     },
     {
@@ -179,15 +179,6 @@
     }
   ],
   "notifications": [
-    {
-      "id": "n_1781893093840",
-      "timestamp": "2026-06-19T18:18:13.840Z",
-      "sellerId": "seller_1781810038574",
-      "sellerName": "umar",
-      "title": "umar is now Online!",
-      "body": "Catch him in action delivering fresh items around f.",
-      "type": "activation"
-    },
     {
       "_id": "6a3443861e93fcbb6590e6ff",
       "id": "n_1781810054458",
@@ -369,6 +360,58 @@
       "title": "umar is now Online!",
       "type": "activation",
       "updatedAt": "2026-06-19T18:05:07.791Z"
+    },
+    {
+      "_id": "6a3587e61e93fcbb65912899",
+      "id": "n_1781893093840",
+      "__v": 0,
+      "body": "Catch him in action delivering fresh items around f.",
+      "createdAt": "2026-06-19T18:18:13.878Z",
+      "sellerId": "seller_1781810038574",
+      "sellerName": "umar",
+      "timestamp": "2026-06-19T18:18:13.840Z",
+      "title": "umar is now Online!",
+      "type": "activation",
+      "updatedAt": "2026-06-19T18:18:13.878Z"
+    },
+    {
+      "_id": "6a358b1d1e93fcbb6591292b",
+      "id": "n_1781893917078",
+      "__v": 0,
+      "body": "Catch him in action delivering fresh items around f.",
+      "createdAt": "2026-06-19T18:31:57.143Z",
+      "sellerId": "seller_1781810038574",
+      "sellerName": "umar",
+      "timestamp": "2026-06-19T18:31:57.079Z",
+      "title": "umar is now Online!",
+      "type": "activation",
+      "updatedAt": "2026-06-19T18:31:57.143Z"
+    },
+    {
+      "_id": "6a358ce81e93fcbb65912942",
+      "id": "n_1781894374617",
+      "__v": 0,
+      "body": "Catch him in action delivering fresh items around f.",
+      "createdAt": "2026-06-19T18:39:34.658Z",
+      "sellerId": "seller_1781810038574",
+      "sellerName": "umar",
+      "timestamp": "2026-06-19T18:39:34.617Z",
+      "title": "umar is now Online!",
+      "type": "activation",
+      "updatedAt": "2026-06-19T18:39:34.658Z"
+    },
+    {
+      "_id": "6a3813e11e93fcbb6591e115",
+      "id": "n_1782060001576",
+      "__v": 0,
+      "body": "Catch him in action delivering fresh items around f.",
+      "createdAt": "2026-06-21T16:40:01.656Z",
+      "sellerId": "seller_1781810038574",
+      "sellerName": "umar",
+      "timestamp": "2026-06-21T16:40:01.576Z",
+      "title": "umar is now Online!",
+      "type": "activation",
+      "updatedAt": "2026-06-21T16:40:01.656Z"
     }
   ],
   "feedbacks": [
