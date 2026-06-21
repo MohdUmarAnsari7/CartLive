@@ -485,7 +485,7 @@ export default function LeafletMap({
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full border border-emerald-500 overflow-hidden flex-shrink-0 bg-slate-50 shadow-sm">
               {selectedSeller.profilePhoto ? (
-                <img src={selectedSeller.profilePhoto} className="w-full h-full object-cover" referrerpolicy="no-referrer" />
+                <img src={selectedSeller.profilePhoto} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
               ) : (
                 <div className="w-full h-full bg-emerald-50 flex items-center justify-center text-emerald-700 font-extrabold text-xs">
                   {selectedSeller.name.substring(0, 2)}
@@ -527,7 +527,7 @@ export default function LeafletMap({
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full border border-emerald-500 overflow-hidden flex-shrink-0 bg-slate-50 shadow-sm">
               {routedSeller.profilePhoto ? (
-                <img src={routedSeller.profilePhoto} className="w-full h-full object-cover" referrerpolicy="no-referrer" />
+                <img src={routedSeller.profilePhoto} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
               ) : (
                 <div className="w-full h-full bg-emerald-50 flex items-center justify-center text-emerald-700 font-extrabold text-sm">
                   {routedSeller.name.substring(0, 2)}
